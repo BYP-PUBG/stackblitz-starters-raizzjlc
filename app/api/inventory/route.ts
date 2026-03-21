@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRarity, getType, RARITY_CONFIG } from '@/lib/steam'
+import { RARITY_CONFIG } from '@/lib/steam'
 
 const PUBG_APP_ID = 578080
+
+function getRarityFromName(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('crate')) return 'common'
+  if (n.includes('gold plate') || n.includes('lucky knight')) return 'legendary'
+  if (n.includes('gunsmith') || n.includes('jungle digital')) return 'epic'
+  if (n.includes('silver plate') || n.includes('pgc') || n.includes('pcs')) return 'rare'
+  return 'common'
+}
+
+function getTypeFromName(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('crate')) return 'Crate'
+  if (n.includes('pants') || n.includes('shorts')) return 'Pants'
+  if (n.includes('jacket') || n.includes('hoodie') || n.includes('turtleneck') || n.includes('tank top') || n.includes('t-shirt')) return 'Top'
+  if (n.includes('gloves')) return 'Gloves'
+  if (n.includes('helmet')) return 'Helmet'
+  if (n.includes('goggles') || n.includes('headgear')) return 'Headwear'
+  if (n.includes('shoes') || n.includes('sneakers') || n.includes('boots') || n.includes('trainers') || n.includes('slippers') || n.includes('slip-ons') || n.includes('kicks')) return 'Shoes'
+  if (n.includes('backpack')) return 'Backpack'
+  if (n.includes('parachute')) return 'Parachute'
+  if (n.includes('dacia') || n.includes('buggy') || n.includes('vehicle')) return 'Vehicle'
+  if (n.includes('braces') || n.includes('watch') || n.includes('necklace')) return 'Accessory'
+  if (n.includes(' - ') || n.includes('plate') || n.includes('skin')) return 'Weapon Skin'
+  return 'Other'
+}
 
 export async function GET(req: NextRequest) {
   const steamId = req.nextUrl.searchParams.get('steamid')
@@ -16,20 +42,10 @@ export async function GET(req: NextRequest) {
       { cache: 'no-store' }
     )
 
-    if (!res.ok) {
-      const text = await res.text()
-      return NextResponse.json({ 
-        error: 'Steam error',
-        status: res.status,
-        body: text.substring(0, 200)
-      }, { status: 404 })
-    }
+    if (!res.ok) return NextResponse.json({ error: 'Steam error', status: res.status }, { status: 404 })
 
     const data = await res.json()
-
-    if (!data || data.success === false) {
-      return NextResponse.json({ error: 'Inventory is private or not found' }, { status: 404 })
-    }
+    if (!data || data.success === false) return NextResponse.json({ error: 'Inventory is private or not found' }, { status: 404 })
 
     const descMap = new Map(
       data.descriptions?.map((d: any) => [`${d.classid}_${d.instanceid}`, d])
@@ -37,14 +53,18 @@ export async function GET(req: NextRequest) {
 
     const items = (data.assets || []).map((asset: any) => {
       const desc: any = descMap.get(`${asset.classid}_${asset.instanceid}`)
+      const name = desc?.market_hash_name || desc?.name || 'Unknown'
+      const rarity = getRarityFromName(name)
+      const type = getTypeFromName(name)
+
       return {
         assetid: asset.assetid,
-        name: desc?.market_hash_name || desc?.name || 'Unknown',
+        name,
         icon: desc?.icon_url
           ? `https://community.akamai.steamstatic.com/economy/image/${desc.icon_url}/128x128`
           : null,
-        rarity: getRarity(desc?.tags),
-        type: getType(desc?.tags),
+        rarity,
+        type,
         tradable: desc?.tradable === 1,
       }
     })
