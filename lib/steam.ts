@@ -24,16 +24,44 @@ export function toSteamId64(id: string): string {
 
 export function getRarity(tags: any[]): Rarity {
   if (!tags) return 'common'
-  const tag = tags.find(t => t.category === 'Quality' || t.category === 'Rarity')
-  const val = tag?.localized_tag_name?.toLowerCase() || ''
-  if (val.includes('mythic'))    return 'mythic'
-  if (val.includes('legendary')) return 'legendary'
-  if (val.includes('epic'))      return 'epic'
-  if (val.includes('rare'))      return 'rare'
+
+  for (const tag of tags) {
+    const cat = tag.category?.toLowerCase() || ''
+    const val = tag.localized_tag_name?.toLowerCase() || tag.name?.toLowerCase() || ''
+
+    if (cat === 'quality' || cat === 'rarity' || cat === 'itemrarity') {
+      if (val.includes('mythic'))    return 'mythic'
+      if (val.includes('legendary')) return 'legendary'
+      if (val.includes('epic'))      return 'epic'
+      if (val.includes('rare'))      return 'rare'
+      if (val.includes('uncommon')) return 'rare'
+    }
+
+    if (cat === 'exterior' || cat === 'grade') {
+      if (val.includes('mythic'))    return 'mythic'
+      if (val.includes('legendary')) return 'legendary'
+      if (val.includes('epic'))      return 'epic'
+      if (val.includes('rare'))      return 'rare'
+    }
+  }
+
   return 'common'
 }
 
 export function getType(tags: any[]): string {
   if (!tags) return 'unknown'
-  return tags.find(t => t.category === 'Type')?.localized_tag_name || 'unknown'
+
+  for (const tag of tags) {
+    const cat = tag.category?.toLowerCase() || ''
+    if (
+      cat === 'type' ||
+      cat === 'itemtype' ||
+      cat === 'slot' ||
+      cat === 'weapon_type'
+    ) {
+      return tag.localized_tag_name || tag.name || 'unknown'
+    }
+  }
+
+  return 'unknown'
 }
