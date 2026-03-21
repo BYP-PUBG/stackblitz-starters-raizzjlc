@@ -8,17 +8,20 @@ export async function GET(req: NextRequest) {
   if (!steamId) return NextResponse.json({ error: 'Missing steamid' }, { status: 400 })
 
   try {
-    const res = await fetch(
-      `https://steamcommunity.com/inventory/${steamId}/${PUBG_APP_ID}/2?l=english&count=5000`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'https://steamcommunity.com/',
-        }
-      }
-    )
+    const url = `https://steamcommunity.com/inventory/${steamId}/${PUBG_APP_ID}/2?l=english&count=5000&norender=1`
+    
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Referer': `https://steamcommunity.com/profiles/${steamId}/inventory/`,
+        'Origin': 'https://steamcommunity.com',
+      },
+      cache: 'no-store'
+    })
 
     if (!res.ok) {
       const text = await res.text()
@@ -30,6 +33,10 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json()
+
+    if (!data || data.success === false) {
+      return NextResponse.json({ error: 'Inventory is private or not found' }, { status: 404 })
+    }
 
     const descMap = new Map(
       data.descriptions?.map((d: any) => [`${d.classid}_${d.instanceid}`, d])
@@ -56,7 +63,13 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({ items, total: items.length })
+
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
+```
+
+Commit แล้วรอ deploy เสร็จ จากนั้นลองเปิด URL นี้อีกครั้งครับ:
+```
+https://pubg-inventory.vercel.app/api/inventory?steamid=76561198145644994
