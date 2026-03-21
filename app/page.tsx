@@ -70,7 +70,7 @@ export default function Home() {
               <label className="text-sm text-gray-400 w-40">มี Polymers แล้ว</label>
               <input
                 type="number"
-                value={ownedPoly}
+                value={ownedPoly || ''}
                 min={0}
                 onChange={e => setOwnedPoly(parseInt(e.target.value) || 0)}
                 className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none"
