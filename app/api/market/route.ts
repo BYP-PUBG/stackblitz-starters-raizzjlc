@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await fetch(
-      `https://steamcommunity.com/market/priceoverview/?appid=578080&currency=23&market_hash_name=${encodeURIComponent(name)}`,
+      `https://steamcommunity.com/market/priceoverview/?appid=578080&currency=6&market_hash_name=${encodeURIComponent(name)}`,
       {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
