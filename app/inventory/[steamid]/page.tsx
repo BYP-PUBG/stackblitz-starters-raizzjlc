@@ -38,11 +38,22 @@ export default function InventoryPage() {
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-6xl mx-auto px-4 py-8">
 
+        {/* Header */}
         <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">VAULT</span></h1>
             <p className="text-gray-400 text-sm mt-1">ไอเทมทั้งหมด {items.length} ชิ้น</p>
+            <div className="flex gap-2 mt-3">
+              <a href="/" className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded-full px-3 py-1 transition-colors">
+                หน้าหลัก
+              </a>
+              <a href="/market" className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded-full px-3 py-1 transition-colors">
+                Steam Market
+              </a>
+            </div>
           </div>
+
+          {/* Rarity summary */}
           <div className="flex gap-4">
             {(Object.keys(RARITY_CONFIG) as Rarity[]).map(r => {
               const count = items.filter(i => i.rarity === r).length
@@ -58,6 +69,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
+        {/* Filter tabs */}
         <div className="flex gap-2 flex-wrap mb-4">
           {FILTERS.map(f => (
             <button
@@ -74,46 +86,5 @@ export default function InventoryPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {filtered.map((item, idx) => {
-            const cfg = RARITY_CONFIG[item.rarity]
-            return (
-              <div
-                key={item.assetid}
-                className="rounded-xl overflow-hidden hover:-translate-y-1 transition-transform"
-                style={{ border: `2px solid ${cfg.border}`, background: '#111827' }}
-              >
-                <div className="relative aspect-square flex items-center justify-center p-2"
-                  style={{ background: cfg.bg + '18' }}>
-                  {item.icon
-                    ? <img src={item.icon} alt={item.name} className="w-full h-full object-contain" />
-                    : <div className="text-4xl">🎮</div>
-                  }
-                  <span className="absolute top-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded"
-                    style={{ background: cfg.bg, color: cfg.text }}>
-                    #{idx + 1}
-                  </span>
-                  <span className="absolute bottom-1 right-1 text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: cfg.bg, color: cfg.text }}>
-                    {cfg.label}
-                  </span>
-                </div>
-                <div className="p-2">
-                  <p className="text-xs text-white font-medium truncate">{item.name}</p>
-                  <p className="text-xs text-gray-500 truncate mt-0.5">{item.type}</p>
-                  {item.tradable && (
-                    <span className="text-xs text-green-500 mt-1 block">Tradable</span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="text-center text-gray-600 py-20 text-sm">ไม่พบไอเทมในหมวดนี้</div>
-        )}
-      </div>
-    </main>
-  )
-}
+        {/* Grid */}
+        <div classNa
