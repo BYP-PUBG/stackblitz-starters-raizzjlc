@@ -1,19 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async headers() {
-    return [
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-        ],
-      },
-    ]
-  },
   images: {
     domains: ['community.akamai.steamstatic.com'],
   },
 }
 
-export default nextConfig
-
+module.exports = nextConfig
