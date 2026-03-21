@@ -68,8 +68,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
-```
 
-Commit แล้วรอ deploy เสร็จ จากนั้นลองเปิด URL นี้อีกครั้งครับ:
-```
-https://pubg-inventory.vercel.app/api/inventory?steamid=76561198145644994
