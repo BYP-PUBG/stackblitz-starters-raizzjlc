@@ -34,9 +34,11 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    items.sort((a: any, b: any) =>
-      (RARITY_CONFIG[a.rarity]?.order ?? 99) - (RARITY_CONFIG[b.rarity]?.order ?? 99)
-    )
+    items.sort((a: any, b: any) => {
+      const orderA = (RARITY_CONFIG as any)[a.rarity]?.order ?? 99
+      const orderB = (RARITY_CONFIG as any)[b.rarity]?.order ?? 99
+      return orderA - orderB
+    })
 
     return NextResponse.json({ items, total: items.length })
   } catch {
