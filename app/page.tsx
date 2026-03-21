@@ -216,3 +216,60 @@ export default function Home() {
                 <p className="text-xs text-gray-400 mt-1">{popup.poly} Polymers ต่ออัน</p>
               </div>
               <button onClick={() => setPopup(null)} className="text-gray-500 hover:text-white text-2xl leading-none">×</butt
+                                                                                                                         on>
+          </div>
+
+            {/* Dropdown */}
+            <select
+              value={selectedGun}
+              onChange={e => fetchPrice(e.target.value)}
+              className="w-full bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none mb-4"
+            >
+              <option value="">เลือกปืน...</option>
+              {popup.guns.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+
+            {loadingPrice && (
+              <div className="text-center text-gray-400 text-sm py-4">กำลังดึงราคา...</div>
+            )}
+
+            {!loadingPrice && marketData && (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-gray-800 rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-400">ราคาต่ำสุด</div>
+                    <div className="text-lg font-bold text-green-400 mt-1">
+                      {marketData.lowest_price || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-400">ราคากลาง</div>
+                    <div className="text-lg font-bold text-blue-400 mt-1">
+                      {marketData.median_price || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-800 rounded-xl p-3 text-center">
+                  <div className="text-xs text-gray-400">จำนวนที่วางขายอยู่</div>
+                  <div className="text-lg font-bold text-white mt-1">
+                    {parseInt(marketData.volume || '0').toLocaleString()} ชิ้น
+                  </div>
+                </div>
+                
+                  href={`https://steamcommunity.com/market/listings/578080/${encodeURIComponent(selectedGun)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-center text-xs text-blue-400 hover:text-blue-300"
+                >
+                  ดูใน Steam Market →
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
+  )
+}
