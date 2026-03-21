@@ -21,8 +21,3 @@ export async function GET(req: NextRequest) {
     body: text.substring(0, 500)
   })
 }
-```
-
-Commit แล้วเปิด URL นี้ครับ:
-```
-https://pubg-inventory.vercel.app/api/inventory?steamid=76561198145644994
