@@ -11,8 +11,8 @@ const TIERS=[
   {name:'Legendary',color:'#E24B4A',poly:800,guns:['Industrial Security - AKM','Gold Plate - S686','Shark Bite - Kar98k','Venetian - Mini14','Glory - AKM','PCS2 Fierce Conflict - G36C','PCS1 - M416','PCS1 - SKS','PCS2 Gilded Triumph - Kar98k','PCS2 Gilded Triumph - Mini14','PCS1 - QBZ']},
 ]
 const LANGS=[
-  {label:'🇹🇭 ไทย',code:'TH',currency:6,symbol:'฿'},
-  {label:'🇺🇸 EN',code:'EN',currency:1,symbol:'$'},
+  {label:'🇹🇭 ไทย',code:'TH',currency:1,symbol:'฿',rate:33},
+  {label:'🇺🇸 EN',code:'EN',currency:1,symbol:'$',rate:1},
 ]
 const TEXT={
   TH:{subtitle:'คำนวณ Polymers ที่ต้องการอัพเกรดปืน พร้อมเปรียบเทียบราคาจาก Steam Market',currentLv:'ปืนอยู่ที่ Level',targetLv:'อยากอัพถึง Level',owned:'มี Polymers อยู่แล้ว',needed:'Polymers ที่ต้องการ',lacking:'ขาดอีก',bp:'Blueprints',compare:'เปรียบเทียบทุก Tier',compareSub:'ดึงราคาจาก Steam Market แบบ Real-time',compareBtn:'เปรียบเทียบ',loading:'กำลังดึงข้อมูล...',s1:'Strategy 1 — คุ้มสุด',s1sub:'ซื้อ Tier เดียวที่ได้ Poly/บาทดีสุด',s2:'Strategy 2 — ผสม 70/30',s2sub:'ถูก 70% + แพงกว่า 30%',s3:'Strategy 3 — ผสม 40/60',s3sub:'ถูก 40% + แพงกว่า 60%',tierTitle:'เลือก Tier เพื่อดูราคาปืน',table:'ตารางอัพเกรด',pcs:'ชิ้น',buy:'ซื้อ',total:'รวม',market:'ดูใน Steam Market →',fetching:'กำลังดึงราคา...',inMarket:'ชิ้นในตลาด',summary:'สรุป',totalCost:'ราคารวม',qty:'จำนวน',ppb:'Poly/บาท'},
