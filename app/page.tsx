@@ -52,7 +52,7 @@ export default function Home(){
   }
   function fmt(num:number|null):string{
     if(!num)return 'N/A'
-    return `${lang.symbol}${num.toFixed(2)}`
+    return `${lang.symbol}${(num*lang.rate).toFixed(2)}`
   }
 
   async function openPopup(tier:typeof TIERS[0]){
