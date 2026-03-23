@@ -15,10 +15,12 @@ const LANGS=[
   {label:'🇺🇸 EN',code:'EN',currency:1,symbol:'$'},
 ]
 const TEXT={
-  TH:{subtitle:'คำนวณ Polymers ที่ต้องการอัพเกรดปืน',currentLv:'ปืนอยู่ที่ Level',targetLv:'อยากอัพถึง Level',owned:'มี Polymers อยู่แล้ว',needed:'Polymers ที่ต้องการ',lacking:'ขาดอีก',bp:'Blueprints ที่ต้องการ',compare:'เปรียบเทียบทุก Tier',compareSub:'แนะนำว่าควรซื้อ Tier ไหน',compareBtn:'เปรียบเทียบ',loading:'กำลังดึง...',cheap:'ถูกสุด',best:'คุ้มสุด',mid:'กลางๆ',tierTitle:'กดที่ Tier เพื่อดูราคาปืน',table:'ตารางอัพเกรด',lowest:'ราคาต่ำสุด',listed:'วางขายอยู่',pcs:'ชิ้น',buy:'ซื้อ',total:'รวม',market:'ดูใน Steam Market →',fetching:'กำลังดึงราคา...',inMarket:'ชิ้นในตลาด',summary:'สรุป'},
-  EN:{subtitle:'Calculate Polymers needed to upgrade your weapon',currentLv:'Current level',targetLv:'Target level',owned:'Polymers owned',needed:'Polymers needed',lacking:'Still need',bp:'Blueprints needed',compare:'Compare all Tiers',compareSub:'Get a recommendation instantly',compareBtn:'Compare',loading:'Loading...',cheap:'Cheapest',best:'Best value',mid:'Balanced',tierTitle:'Tap a Tier to see prices',table:'Upgrade table',lowest:'Lowest price',listed:'Listed',pcs:'pcs',buy:'Buy',total:'Total',market:'View on Steam Market →',fetching:'Fetching prices...',inMarket:'listed',summary:'Summary'},
+  TH:{subtitle:'คำนวณ Polymers ที่ต้องการอัพเกรดปืน',currentLv:'ปืนอยู่ที่ Level',targetLv:'อยากอัพถึง Level',owned:'มี Polymers อยู่แล้ว',needed:'Polymers ที่ต้องการ',lacking:'ขาดอีก',bp:'Blueprints ที่ต้องการ',compare:'เปรียบเทียบทุก Tier',compareSub:'แนะนำว่าควรซื้อ Tier ไหน',compareBtn:'เปรียบเทียบ',loading:'กำลังดึง...',s1:'Strategy 1 — คุ้มสุด',s1sub:'ซื้อ Tier เดียวที่ได้ Poly/บาทดีสุด',s2:'Strategy 2 — ผสม 70/30',s2sub:'ถูก 70% + แพงกว่า 30%',s3:'Strategy 3 — ผสม 40/60',s3sub:'ถูก 40% + แพงกว่า 60%',tierTitle:'กดที่ Tier เพื่อดูราคาปืน',table:'ตารางอัพเกรด',lowest:'ราคาต่ำสุด',listed:'วางขายอยู่',pcs:'ชิ้น',buy:'ซื้อ',total:'รวม',market:'ดูใน Steam Market →',fetching:'กำลังดึงราคา...',inMarket:'ชิ้นในตลาด',summary:'สรุป',totalCost:'ราคารวม',qty:'จำนวน',ppb:'Poly/บาท'},
+  EN:{subtitle:'Calculate Polymers needed to upgrade your weapon',currentLv:'Current level',targetLv:'Target level',owned:'Polymers owned',needed:'Polymers needed',lacking:'Still need',bp:'Blueprints needed',compare:'Compare all Tiers',compareSub:'Get a recommendation instantly',compareBtn:'Compare',loading:'Loading...',s1:'Strategy 1 — Best value',s1sub:'Buy one Tier with best Poly/price',s2:'Strategy 2 — Mix 70/30',s2sub:'Cheap 70% + Pricier 30%',s3:'Strategy 3 — Mix 40/60',s3sub:'Cheap 40% + Pricier 60%',tierTitle:'Tap a Tier to see prices',table:'Upgrade table',lowest:'Lowest price',listed:'Listed',pcs:'pcs',buy:'Buy',total:'Total',market:'View on Steam Market →',fetching:'Fetching prices...',inMarket:'listed',summary:'Summary',totalCost:'Total cost',qty:'Qty',ppb:'Poly/price'},
 }
 interface MarketData{lowest_price:string|null;median_price:string|null;volume:string}
+interface CompareResult{name:string;price:number|null;volume:number;tier:typeof TIERS[0]}
+
 export default function Home(){
   const [lang,setLang]=useState(LANGS[0])
   const [currentLevel,setCurrentLevel]=useState(1)
@@ -29,8 +31,9 @@ export default function Home(){
   const [gunPrices,setGunPrices]=useState<{name:string;price:number|null;volume:number}[]>([])
   const [loadingGuns,setLoadingGuns]=useState(false)
   const [comparing,setComparing]=useState(false)
-  const [compareResults,setCompareResults]=useState<{name:string;price:number|null;volume:number;tier:typeof TIERS[0]}[]>([])
+  const [compareResults,setCompareResults]=useState<CompareResult[]>([])
   const [loadingCompare,setLoadingCompare]=useState(false)
+
   const t=TEXT[lang.code as 'TH'|'EN']
   const owned=typeof ownedPoly==='string'?0:ownedPoly
   const cumTarget=CUMULATIVE.find(c=>c.level===targetLevel)!
@@ -45,9 +48,9 @@ export default function Home(){
     const p=parseFloat(cleaned)
     return isNaN(p)||p===0?null:p
   }
-  function fmt(price:number|null):string{
-    if(!price)return 'N/A'
-    return `${lang.symbol}${price.toFixed(2)}`
+  function fmt(num:number|null):string{
+    if(num===null||num===0)return 'N/A'
+    return `${lang.symbol}${num.toFixed(2)}`
   }
 
   async function openPopup(tier:typeof TIERS[0]){
@@ -68,7 +71,7 @@ export default function Home(){
 
   async function compareAll(){
     setComparing(true);setLoadingCompare(true)
-    const results=[]
+    const results:CompareResult[]=[]
     for(const tier of TIERS){
       try{
         const res=await fetch(`/api/market?name=${encodeURIComponent(tier.guns[0])}&currency=${lang.currency}`)
@@ -81,28 +84,34 @@ export default function Home(){
     setLoadingCompare(false)
   }
 
-  const validResults=compareResults.filter(r=>r.price&&r.price>0)
+  const validResults=[...compareResults].filter(r=>r.price&&r.price>0)
+  const sortedByValue=[...validResults].sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))
+  const bestTier=sortedByValue[0]
+  const secondTier=sortedByValue[1]
 
-const bestValue=validResults.sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))[0]
+  function calcS1(){
+    if(!bestTier)return null
+    const qty=Math.ceil(needPoly/bestTier.tier.poly)
+    const cost=qty*(bestTier.price||0)
+    const ppb=needPoly/cost
+    return{tier1:bestTier,qty1:qty,cost,ppb}
+  }
 
-function calcMix(cheapRatio:number,expRatio:number){
-  if(validResults.length<2)return null
-  const sorted=[...validResults].sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))
-  const cheapTier=sorted[0]
-  const expTier=sorted[Math.min(1,sorted.length-1)]
-  const totalPoly=needPoly
-  const cheapPoly=Math.round(totalPoly*cheapRatio)
-  const expPoly=totalPoly-cheapPoly
-  const cheapQty=Math.ceil(cheapPoly/cheapTier.tier.poly)
-  const expQty=Math.ceil(expPoly/expTier.tier.poly)
-  const totalCost=cheapQty*(cheapTier.price||0)+expQty*(expTier.price||0)
-  const totalQty=cheapQty+expQty
-  const avgPolyPerBaht=totalPoly/totalCost
-  return{cheapTier,expTier,cheapQty,expQty,totalCost,totalQty,avgPolyPerBaht}
-}
+  function calcMix(cheapRatio:number){
+    if(!bestTier||!secondTier)return null
+    const cheapPoly=Math.round(needPoly*cheapRatio)
+    const expPoly=needPoly-cheapPoly
+    const qty1=Math.ceil(cheapPoly/bestTier.tier.poly)
+    const qty2=Math.ceil(expPoly/secondTier.tier.poly)
+    const cost=qty1*(bestTier.price||0)+qty2*(secondTier.price||0)
+    const totalQty=qty1+qty2
+    const ppb=needPoly/cost
+    return{tier1:bestTier,tier2:secondTier,qty1,qty2,totalQty,cost,ppb}
+  }
 
-const mix7030=calcMix(0.7,0.3)
-const mix4060=calcMix(0.4,0.6)
+  const s1=calcS1()
+  const s2=calcMix(0.7)
+  const s3=calcMix(0.4)
   const levelOptions=Array.from({length:10},(_,i)=>i+1)
 
   return(
@@ -112,9 +121,7 @@ const mix4060=calcMix(0.4,0.6)
           <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">POLYMER</span></h1>
           <div className="flex gap-2">
             {LANGS.map(l=>(
-              <button key={l.code} onClick={()=>{setLang(l);setCompareResults([]);setComparing(false)}} className={`text-xs px-3 py-1 rounded-full border transition-colors ${lang.code===l.code?'bg-red-500 border-red-500 text-white':'border-gray-700 text-gray-400 hover:text-white'}`}>
-                {l.label}
-              </button>
+              <button key={l.code} onClick={()=>{setLang(l);setCompareResults([]);setComparing(false)}} className={`text-xs px-3 py-1 rounded-full border transition-colors ${lang.code===l.code?'bg-red-500 border-red-500 text-white':'border-gray-700 text-gray-400 hover:text-white'}`}>{l.label}</button>
             ))}
           </div>
         </div>
@@ -141,63 +148,65 @@ const mix4060=calcMix(0.4,0.6)
           </div>
         </div>
 
-       <div className="flex flex-col gap-3">
-  {bestValue&&(
-    <div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800">
-      <div className="text-xs text-green-400 font-medium mb-1">Strategy 1 — คุ้มสุด</div>
-      <div className="text-xs text-gray-300 mb-2">ซื้อ <span className="font-medium" style={{color:bestValue.tier.color}}>{bestValue.tier.name}</span> ทั้งหมด</div>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div><div className="text-xs text-gray-400">ราคารวม</div><div className="text-sm font-bold text-green-400">{fmt(Math.ceil(needPoly/bestValue.tier.poly)*(bestValue.price||0))}</div></div>
-        <div><div className="text-xs text-gray-400">จำนวน</div><div className="text-sm font-bold text-white">{Math.ceil(needPoly/bestValue.tier.poly)} ชิ้น</div></div>
-        <div><div className="text-xs text-gray-400">Poly/บาท</div><div className="text-sm font-bold text-white">{(bestValue.tier.poly/(bestValue.price||1)).toFixed(1)}</div></div>
-      </div>
-    </div>
-  )}
-  {mix7030&&(
-    <div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800">
-      <div className="text-xs text-blue-400 font-medium mb-1">Strategy 2 — ผสม 70/30</div>
-      <div className="text-xs text-gray-300 mb-2">
-        <span className="font-medium" style={{color:mix7030.cheapTier.tier.color}}>{mix7030.cheapTier.tier.name}</span> {mix7030.cheapQty} ชิ้น +{' '}
-        <span className="font-medium" style={{color:mix7030.expTier.tier.color}}>{mix7030.expTier.tier.name}</span> {mix7030.expQty} ชิ้น
-      </div>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div><div className="text-xs text-gray-400">ราคารวม</div><div className="text-sm font-bold text-blue-400">{fmt(mix7030.totalCost)}</div></div>
-        <div><div className="text-xs text-gray-400">จำนวน</div><div className="text-sm font-bold text-white">{mix7030.totalQty} ชิ้น</div></div>
-        <div><div className="text-xs text-gray-400">Poly/บาท</div><div className="text-sm font-bold text-white">{mix7030.avgPolyPerBaht.toFixed(1)}</div></div>
-      </div>
-    </div>
-  )}
-  {mix4060&&(
-    <div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800">
-      <div className="text-xs text-purple-400 font-medium mb-1">Strategy 3 — ผสม 40/60</div>
-      <div className="text-xs text-gray-300 mb-2">
-        <span className="font-medium" style={{color:mix4060.cheapTier.tier.color}}>{mix4060.cheapTier.tier.name}</span> {mix4060.cheapQty} ชิ้น +{' '}
-        <span className="font-medium" style={{color:mix4060.expTier.tier.color}}>{mix4060.expTier.tier.name}</span> {mix4060.expQty} ชิ้น
-      </div>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div><div className="text-xs text-gray-400">ราคารวม</div><div className="text-sm font-bold text-purple-400">{fmt(mix4060.totalCost)}</div></div>
-        <div><div className="text-xs text-gray-400">จำนวน</div><div className="text-sm font-bold text-white">{mix4060.totalQty} ชิ้น</div></div>
-        <div><div className="text-xs text-gray-400">Poly/บาท</div><div className="text-sm font-bold text-white">{mix4060.avgPolyPerBaht.toFixed(1)}</div></div>
-      </div>
-    </div>
-  )}
-</div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.needed}</div><div className="text-xl font-bold mt-1">{totalPolyNeeded.toLocaleString()}</div></div>
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.lacking}</div><div className="text-xl font-bold mt-1 text-red-400">{needPoly.toLocaleString()}</div></div>
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.bp}</div><div className="text-xl font-bold mt-1">{totalBpNeeded}</div></div>
+        </div>
+
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div><div className="text-sm font-medium text-white">{t.compare}</div><div className="text-xs text-gray-500">{t.compareSub}</div></div>
             <button onClick={compareAll} className="text-xs px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors">{loadingCompare?t.loading:t.compareBtn}</button>
           </div>
+
           {comparing&&!loadingCompare&&compareResults.length>0&&(
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-3 gap-2">
-                {cheapest&&(<div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800"><div className="text-xs text-green-400 font-medium mb-1">{t.cheap}</div><div className="text-xs text-white font-medium">{cheapest.tier.name}</div><div className="text-sm font-bold text-green-400 mt-1">{fmt(Math.ceil(needPoly/cheapest.tier.poly)*(cheapest.price||0))}</div><div className="text-xs text-gray-500">{Math.ceil(needPoly/cheapest.tier.poly)} {t.pcs}</div></div>)}
-                {bestValue&&(<div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800"><div className="text-xs text-blue-400 font-medium mb-1">{t.best}</div><div className="text-xs text-white font-medium">{bestValue.tier.name}</div><div className="text-sm font-bold text-blue-400 mt-1">{(bestValue.tier.poly/(bestValue.price||1)).toFixed(1)} Poly/{lang.symbol}</div><div className="text-xs text-gray-500">{Math.ceil(needPoly/bestValue.tier.poly)} {t.pcs}</div></div>)}
-                {balanced&&(<div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800"><div className="text-xs text-purple-400 font-medium mb-1">{t.mid}</div><div className="text-xs text-white font-medium">{balanced.tier.name}</div><div className="text-sm font-bold text-purple-400 mt-1">{fmt(Math.ceil(needPoly/balanced.tier.poly)*(balanced.price||0))}</div><div className="text-xs text-gray-500">{Math.ceil(needPoly/balanced.tier.poly)} {t.pcs}</div></div>)}
-              </div>
-              <div className="flex flex-col gap-1">
+              {s1&&(
+                <div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800">
+                  <div className="text-xs text-green-400 font-medium">{t.s1}</div>
+                  <div className="text-xs text-gray-400 mb-2">{t.s1sub}</div>
+                  <div className="text-xs text-gray-300 mb-2">ซื้อ <span className="font-medium" style={{color:s1.tier1.tier.color}}>{s1.tier1.tier.name}</span> {s1.qty1} {t.pcs}</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div><div className="text-xs text-gray-400">{t.totalCost}</div><div className="text-sm font-bold text-green-400">{fmt(s1.cost)}</div></div>
+                    <div><div className="text-xs text-gray-400">{t.qty}</div><div className="text-sm font-bold text-white">{s1.qty1} {t.pcs}</div></div>
+                    <div><div className="text-xs text-gray-400">{t.ppb}</div><div className="text-sm font-bold text-white">{s1.ppb.toFixed(1)}</div></div>
+                  </div>
+                </div>
+              )}
+              {s2&&(
+                <div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800">
+                  <div className="text-xs text-blue-400 font-medium">{t.s2}</div>
+                  <div className="text-xs text-gray-400 mb-2">{t.s2sub}</div>
+                  <div className="text-xs text-gray-300 mb-2">
+                    <span className="font-medium" style={{color:s2.tier1.tier.color}}>{s2.tier1.tier.name}</span> {s2.qty1} {t.pcs} + <span className="font-medium" style={{color:s2.tier2.tier.color}}>{s2.tier2.tier.name}</span> {s2.qty2} {t.pcs}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div><div className="text-xs text-gray-400">{t.totalCost}</div><div className="text-sm font-bold text-blue-400">{fmt(s2.cost)}</div></div>
+                    <div><div className="text-xs text-gray-400">{t.qty}</div><div className="text-sm font-bold text-white">{s2.totalQty} {t.pcs}</div></div>
+                    <div><div className="text-xs text-gray-400">{t.ppb}</div><div className="text-sm font-bold text-white">{s2.ppb.toFixed(1)}</div></div>
+                  </div>
+                </div>
+              )}
+              {s3&&(
+                <div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800">
+                  <div className="text-xs text-purple-400 font-medium">{t.s3}</div>
+                  <div className="text-xs text-gray-400 mb-2">{t.s3sub}</div>
+                  <div className="text-xs text-gray-300 mb-2">
+                    <span className="font-medium" style={{color:s3.tier1.tier.color}}>{s3.tier1.tier.name}</span> {s3.qty1} {t.pcs} + <span className="font-medium" style={{color:s3.tier2.tier.color}}>{s3.tier2.tier.name}</span> {s3.qty2} {t.pcs}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div><div className="text-xs text-gray-400">{t.totalCost}</div><div className="text-sm font-bold text-purple-400">{fmt(s3.cost)}</div></div>
+                    <div><div className="text-xs text-gray-400">{t.qty}</div><div className="text-sm font-bold text-white">{s3.totalQty} {t.pcs}</div></div>
+                    <div><div className="text-xs text-gray-400">{t.ppb}</div><div className="text-sm font-bold text-white">{s3.ppb.toFixed(1)}</div></div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1 mt-1">
                 {compareResults.map(r=>{
                   const qty=Math.ceil(needPoly/r.tier.poly)
-                  return(<div key={r.tier.name} className="flex items-center justify-between text-xs py-2 border-b border-gray-800"><span className="font-medium w-20" style={{color:r.tier.color}}>{r.tier.name}</span><span className="text-white">{fmt(r.price)}</span><span className="text-gray-400">{qty} {t.pcs}</span><span className="text-white font-medium">{r.price?fmt(qty*r.price):'N/A'}</span></div>)
+                  return(<div key={r.tier.name} className="flex items-center justify-between text-xs py-2 border-b border-gray-800"><span className="font-medium w-20" style={{color:r.tier.color}}>{r.tier.name}</span><span className="text-white">{fmt(r.price)}</span><span className="text-gray-400">{qty} {t.pcs}</span><span className="text-white font-medium">{r.price?fmt(qty*r.price):'-'}</span></div>)
                 })}
               </div>
             </div>
@@ -219,46 +228,4 @@ const mix4060=calcMix(0.4,0.6)
           <div className="flex flex-col gap-2">
             {UPGRADES.filter(u=>u.level>currentLevel&&u.level<=targetLevel).map(u=>{
               const cum=CUMULATIVE.find(c=>c.level===u.level)!
-              return(<div key={u.level} className="flex justify-between text-xs py-2 border-b border-gray-800"><span className="text-gray-400">Lv.{u.level-1} → {u.level}</span><span className="text-white">{u.bp} BP + {u.poly.toLocaleString()} Poly</span><span className="text-gray-500">{(cum.poly-(cumCurrent?.poly||0)).toLocaleString()}</span></div>)
-            })}
-          </div>
-        </div>
-      </div>
-
-      {popup&&(
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center px-4 z-50" onClick={()=>setPopup(null)}>
-          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-sm" style={{border:`2px solid ${popup.color}`}} onClick={e=>e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <div><h2 className="text-base font-bold" style={{color:popup.color}}>{popup.name}</h2><p className="text-xs text-gray-400 mt-1">{popup.poly} Poly/{t.pcs}</p></div>
-              <button onClick={()=>setPopup(null)} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
-            </div>
-            {loadingGuns&&(<div className="text-center text-gray-400 text-sm py-4">{t.fetching}</div>)}
-            {!loadingGuns&&gunPrices.length>0&&(
-              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
-                {gunPrices.map((g,idx)=>(
-                  <div key={g.name} className={`rounded-xl p-3 flex items-center justify-between cursor-pointer transition-colors ${selectedGun===g.name?'bg-gray-600':'bg-gray-800 hover:bg-gray-700'}`} onClick={()=>setSelectedGun(g.name)} style={idx===0?{border:`1px solid ${popup.color}`}:{}}>
-                    <div className="flex items-center gap-2">
-                      {idx===0&&<span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:popup.color+'33',color:popup.color}}>{t.cheap}</span>}
-                      <div><div className="text-xs text-white font-medium">{g.name}</div><div className="text-xs text-gray-400 mt-0.5">{g.volume.toLocaleString()} {t.inMarket}</div></div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-green-400">{fmt(g.price)}</div>
-                      {g.price&&<div className="text-xs text-gray-400">{(popup.poly/g.price).toFixed(1)} Poly/{lang.symbol}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {selectedGun&&gunPrices.find(g=>g.name===selectedGun)?.price&&(
-              <div className="bg-gray-800 rounded-xl p-3 mt-2">
-                <div className="text-xs text-gray-400 mb-1">{t.summary}: {selectedGun}</div>
-                <div className="text-xs text-white">{t.buy} {Math.ceil(needPoly/popup.poly).toLocaleString()} {t.pcs} {t.total} {fmt(Math.ceil(needPoly/popup.poly)*(gunPrices.find(g=>g.name===selectedGun)?.price||0))}</div>
-                <a href={`https://steamcommunity.com/market/listings/578080/${encodeURIComponent(selectedGun)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 mt-1 block">{t.market}</a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </main>
-  )
-}
+              return(<div key={u.level} className="flex justify-between text-xs py-2 border-b border-gray-800"><span className="text-gray-400">Lv.{u.level-1} → {u.level}</span><span className="text-white">{u.bp} BP + {u.pol
