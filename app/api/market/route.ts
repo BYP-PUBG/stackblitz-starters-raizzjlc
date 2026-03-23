@@ -27,8 +27,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
-```
-
-Commit แล้วลองเปิด URL นี้ดูครับ:
-```
-https://pubg-inventory.vercel.app/api/market?name=Gold%20Plate%20-%20AKM&currency=6
