@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
       {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'th-TH,th;q=0.9,en;q=0.8',
+          'Cookie': 'Steam_Language=thai; steamCountry=TH%7C; timezoneOffset=25200,0',
         },
         cache: 'no-store'
       }
@@ -25,3 +27,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
+```
+
+Commit แล้วลองเปิด URL นี้ดูครับ:
+```
+https://pubg-inventory.vercel.app/api/market?name=Gold%20Plate%20-%20AKM&currency=6
