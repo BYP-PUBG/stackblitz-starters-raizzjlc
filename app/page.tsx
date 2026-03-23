@@ -20,9 +20,9 @@ const TEXT={
 }
 interface CompareResult{name:string;price:number|null;volume:number;tier:typeof TIERS[0]}
 
-const card='background:#0f0f1a;border:1px solid #1e1e2e;border-radius:16px;padding:20px'
-const cardSm='background:#0f0f1a;border:1px solid #1e1e2e;border-radius:12px;padding:16px'
-const input='width:100%;background:#1a1a2e;color:white;border:1px solid #2a2a3e;border-radius:10px;padding:10px 14px;font-size:14px;outline:none;box-sizing:border-box'
+const card={background:'#0f0f1a',border:'1px solid #1e1e2e',borderRadius:'16px',padding:'20px'} as React.CSSProperties
+const cardSm={background:'#0f0f1a',border:'1px solid #1e1e2e',borderRadius:'12px',padding:'16px'} as React.CSSProperties
+const input={width:'100%',background:'#1a1a2e',color:'white',border:'1px solid #2a2a3e',borderRadius:'10px',padding:'10px 14px',fontSize:'14px',outline:'none',boxSizing:'border-box'} as React.CSSProperties
 
 export default function Home(){
   const [lang,setLang]=useState(LANGS[0])
