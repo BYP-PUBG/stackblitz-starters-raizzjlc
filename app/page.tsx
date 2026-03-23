@@ -47,7 +47,8 @@ export default function Home(){
 
   function parsePrice(price:string|null):number|null{
     if(!price)return null
-    const p=parseFloat(price.replace(/[^0-9.,]/g,'').replace(',','.'))
+    const cleaned=price.replace(/[^0-9.]/g,'')
+    const p=parseFloat(cleaned)
     return isNaN(p)||p===0?null:p
   }
   function fmt(num:number|null):string{
