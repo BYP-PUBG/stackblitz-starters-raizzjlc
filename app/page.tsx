@@ -53,8 +53,16 @@ export default function Home(){
 
   function parsePrice(price:string|null):number|null{
     if(!price)return null
-    const p=parseFloat(price.replace(/[^0-9.]/g,''))
+    const cleaned=price.replace(/[^0-9.,]/g,'').replace(',','.')
+    const p=parseFloat(cleaned)
     return isNaN(p)||p===0?null:p
+  }
+
+  function formatPrice(price:string|null):string{
+    if(!price)return 'N/A'
+    const num=parsePrice(price)
+    if(!num)return 'N/A'
+    return `${currency.symbol}${num.toFixed(2)}`
   }
 
   async function compareAll(){
