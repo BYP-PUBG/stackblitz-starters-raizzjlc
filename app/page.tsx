@@ -10,46 +10,34 @@ const TIERS=[
   {name:'Epic',color:'#D4537E',poly:200,guns:['Gold Plate - AKM','Turquoise Delight - Kar98k','Gold Plate - S12K','Shark Bite - M16A4','Turquoise Delight - M16A4','Tick Tock - M416','Glory - UMP']},
   {name:'Legendary',color:'#E24B4A',poly:800,guns:['Industrial Security - AKM','Gold Plate - S686','Shark Bite - Kar98k','Venetian - Mini14','Glory - AKM','PCS2 Fierce Conflict - G36C','PCS1 - M416','PCS1 - SKS','PCS2 Gilded Triumph - Kar98k','PCS2 Gilded Triumph - Mini14','PCS1 - QBZ']},
 ]
-const CURRENCY_OPTIONS=[
-  {label:'บาท (฿)',code:'THB',currency:6,symbol:'฿'},
-  {label:'ดอลลาร์ ($)',code:'USD',currency:1,symbol:'$'},
+const LANGS=[
+  {label:'🇹🇭 ไทย',code:'TH',currency:6,symbol:'฿'},
+  {label:'🇺🇸 EN',code:'EN',currency:1,symbol:'$'},
 ]
+const TEXT={
+  TH:{subtitle:'คำนวณ Polymers ที่ต้องการอัพเกรดปืน',currentLv:'ปืนอยู่ที่ Level',targetLv:'อยากอัพถึง Level',owned:'มี Polymers อยู่แล้ว',needed:'Polymers ที่ต้องการ',lacking:'ขาดอีก',bp:'Blueprints ที่ต้องการ',compare:'เปรียบเทียบทุก Tier',compareSub:'แนะนำว่าควรซื้อ Tier ไหน',compareBtn:'เปรียบเทียบ',loading:'กำลังดึง...',cheap:'ถูกสุด',best:'คุ้มสุด',mid:'กลางๆ',tierTitle:'กดที่ Tier เพื่อดูราคาปืน',table:'ตารางอัพเกรด',lowest:'ราคาต่ำสุด',listed:'วางขายอยู่',pcs:'ชิ้น',buy:'ซื้อ',total:'รวม',market:'ดูใน Steam Market →',fetching:'กำลังดึงราคา...',inMarket:'ชิ้นในตลาด',summary:'สรุป'},
+  EN:{subtitle:'Calculate Polymers needed to upgrade your weapon',currentLv:'Current level',targetLv:'Target level',owned:'Polymers owned',needed:'Polymers needed',lacking:'Still need',bp:'Blueprints needed',compare:'Compare all Tiers',compareSub:'Get a recommendation instantly',compareBtn:'Compare',loading:'Loading...',cheap:'Cheapest',best:'Best value',mid:'Balanced',tierTitle:'Tap a Tier to see prices',table:'Upgrade table',lowest:'Lowest price',listed:'Listed',pcs:'pcs',buy:'Buy',total:'Total',market:'View on Steam Market →',fetching:'Fetching prices...',inMarket:'listed',summary:'Summary'},
+}
 interface MarketData{lowest_price:string|null;median_price:string|null;volume:string}
-
 export default function Home(){
+  const [lang,setLang]=useState(LANGS[0])
   const [currentLevel,setCurrentLevel]=useState(1)
   const [targetLevel,setTargetLevel]=useState(10)
   const [ownedPoly,setOwnedPoly]=useState<number|string>('')
   const [popup,setPopup]=useState<typeof TIERS[0]|null>(null)
   const [selectedGun,setSelectedGun]=useState('')
-  const [marketData,setMarketData]=useState<MarketData|null>(null)
-  const [loadingPrice,setLoadingPrice]=useState(false)
-  const [currency,setCurrency]=useState(CURRENCY_OPTIONS[0])
+  const [gunPrices,setGunPrices]=useState<{name:string;price:number|null;volume:number}[]>([])
+  const [loadingGuns,setLoadingGuns]=useState(false)
   const [comparing,setComparing]=useState(false)
   const [compareResults,setCompareResults]=useState<{name:string;price:number|null;volume:number;tier:typeof TIERS[0]}[]>([])
   const [loadingCompare,setLoadingCompare]=useState(false)
-
+  const t=TEXT[lang.code as 'TH'|'EN']
   const owned=typeof ownedPoly==='string'?0:ownedPoly
-
   const cumTarget=CUMULATIVE.find(c=>c.level===targetLevel)!
   const cumCurrent=currentLevel>=2?CUMULATIVE.find(c=>c.level===currentLevel):null
-
   const totalPolyNeeded=cumTarget.poly-(cumCurrent?.poly||0)
   const totalBpNeeded=cumTarget.bp-(cumCurrent?.bp||0)
   const needPoly=Math.max(0,totalPolyNeeded-owned)
-
-  function openPopup(tier:typeof TIERS[0]){setPopup(tier);setSelectedGun('');setMarketData(null)}
-
-  async function fetchPrice(name:string){
-    if(!name)return
-    setSelectedGun(name);setMarketData(null);setLoadingPrice(true)
-    try{
-      const res=await fetch(`/api/market?name=${encodeURIComponent(name)}&currency=${currency.currency}`)
-      const data=await res.json()
-      setMarketData(data)
-    }catch{setMarketData({lowest_price:null,median_price:null,volume:'0'})}
-    finally{setLoadingPrice(false)}
-  }
 
   function parsePrice(price:string|null):number|null{
     if(!price)return null
@@ -57,21 +45,33 @@ export default function Home(){
     const p=parseFloat(cleaned)
     return isNaN(p)||p===0?null:p
   }
-
-  function formatPrice(price:string|null):string{
+  function fmt(price:number|null):string{
     if(!price)return 'N/A'
-    const num=parsePrice(price)
-    if(!num)return 'N/A'
-    return `${currency.symbol}${num.toFixed(2)}`
+    return `${lang.symbol}${price.toFixed(2)}`
+  }
+
+  async function openPopup(tier:typeof TIERS[0]){
+    setPopup(tier);setSelectedGun('');setGunPrices([]);setLoadingGuns(true)
+    const results=[]
+    for(const gun of tier.guns){
+      try{
+        const res=await fetch(`/api/market?name=${encodeURIComponent(gun)}&currency=${lang.currency}`)
+        const data=await res.json()
+        const price=parsePrice(data.lowest_price)
+        results.push({name:gun,price,volume:parseInt(data.volume||'0')})
+      }catch{results.push({name:gun,price:null,volume:0})}
+    }
+    results.sort((a,b)=>{if(a.price===null)return 1;if(b.price===null)return -1;return a.price-b.price})
+    setGunPrices(results)
+    setLoadingGuns(false)
   }
 
   async function compareAll(){
-    setComparing(true)
-    setLoadingCompare(true)
+    setComparing(true);setLoadingCompare(true)
     const results=[]
     for(const tier of TIERS){
       try{
-        const res=await fetch(`/api/market?name=${encodeURIComponent(tier.guns[0])}&currency=${currency.currency}`)
+        const res=await fetch(`/api/market?name=${encodeURIComponent(tier.guns[0])}&currency=${lang.currency}`)
         const data=await res.json()
         const price=parsePrice(data.lowest_price)
         results.push({name:tier.guns[0],price,volume:parseInt(data.volume||'0'),tier})
@@ -84,178 +84,122 @@ export default function Home(){
   const cheapest=compareResults.filter(r=>r.price).sort((a,b)=>(Math.ceil(needPoly/a.tier.poly)*(a.price||0))-(Math.ceil(needPoly/b.tier.poly)*(b.price||0)))[0]
   const bestValue=compareResults.filter(r=>r.price).sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))[0]
   const balanced=compareResults.filter(r=>r.price).sort((a,b)=>Math.ceil(needPoly/a.tier.poly)-Math.ceil(needPoly/b.tier.poly)).slice(1)[0]
-
   const levelOptions=Array.from({length:10},(_,i)=>i+1)
 
   return(
     <main className="min-h-screen bg-gray-950 text-white px-4 py-8">
       <div className="max-w-2xl mx-auto">
-
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">POLYMER</span></h1>
+          <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">{t.title||'POLYMER'}</span></h1>
           <div className="flex gap-2">
-            {CURRENCY_OPTIONS.map(c=>(
-              <button key={c.code} onClick={()=>{setCurrency(c);setCompareResults([]);setComparing(false)}} className={`text-xs px-3 py-1 rounded-full border transition-colors ${currency.code===c.code?'bg-red-500 border-red-500 text-white':'border-gray-700 text-gray-400 hover:text-white'}`}>
-                {c.label}
+            {LANGS.map(l=>(
+              <button key={l.code} onClick={()=>{setLang(l);setCompareResults([]);setComparing(false)}} className={`text-xs px-3 py-1 rounded-full border transition-colors ${lang.code===l.code?'bg-red-500 border-red-500 text-white':'border-gray-700 text-gray-400 hover:text-white'}`}>
+                {l.label}
               </button>
             ))}
           </div>
         </div>
-        <p className="text-gray-400 text-sm mb-8">คำนวณ Polymers ที่ต้องการอัพเกรดปืน</p>
+        <p className="text-gray-400 text-sm mb-8">{t.subtitle}</p>
 
-        {/* ตั้งค่า */}
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-400 w-44">ปืนอยู่ที่ Level ปัจจุบัน</label>
+              <label className="text-sm text-gray-400 w-44">{t.currentLv}</label>
               <select value={currentLevel} onChange={e=>setCurrentLevel(parseInt(e.target.value))} className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none">
                 {levelOptions.filter(l=>l<10).map(l=>(<option key={l} value={l}>Level {l}</option>))}
               </select>
             </div>
             <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-400 w-44">อยากอัพไปถึง Level</label>
+              <label className="text-sm text-gray-400 w-44">{t.targetLv}</label>
               <select value={targetLevel} onChange={e=>setTargetLevel(parseInt(e.target.value))} className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none">
                 {levelOptions.filter(l=>l>currentLevel).map(l=>(<option key={l} value={l}>Level {l}</option>))}
               </select>
             </div>
             <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-400 w-44">มี Polymers อยู่แล้ว</label>
+              <label className="text-sm text-gray-400 w-44">{t.owned}</label>
               <input type="number" value={ownedPoly} min={0} onChange={e=>setOwnedPoly(e.target.value===''?'':parseInt(e.target.value))} placeholder="0" className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none"/>
             </div>
           </div>
         </div>
 
-        {/* สรุป */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
-            <div className="text-xs text-gray-400">Polymers ที่ต้องการ</div>
-            <div className="text-xl font-bold mt-1">{totalPolyNeeded.toLocaleString()}</div>
-          </div>
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
-            <div className="text-xs text-gray-400">ขาดอีก</div>
-            <div className="text-xl font-bold mt-1 text-red-400">{needPoly.toLocaleString()}</div>
-          </div>
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center">
-            <div className="text-xs text-gray-400">Blueprints ที่ต้องการ</div>
-            <div className="text-xl font-bold mt-1">{totalBpNeeded}</div>
-          </div>
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.needed}</div><div className="text-xl font-bold mt-1">{totalPolyNeeded.toLocaleString()}</div></div>
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.lacking}</div><div className="text-xl font-bold mt-1 text-red-400">{needPoly.toLocaleString()}</div></div>
+          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.bp}</div><div className="text-xl font-bold mt-1">{totalBpNeeded}</div></div>
         </div>
 
-        {/* เปรียบเทียบ */}
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-sm font-medium text-white">เปรียบเทียบทุก Tier</div>
-              <div className="text-xs text-gray-500">แนะนำให้เลยว่าควรซื้อ Tier ไหน</div>
-            </div>
-            <button onClick={compareAll} className="text-xs px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors">
-              {loadingCompare?'กำลังดึง...':'เปรียบเทียบ'}
-            </button>
+            <div><div className="text-sm font-medium text-white">{t.compare}</div><div className="text-xs text-gray-500">{t.compareSub}</div></div>
+            <button onClick={compareAll} className="text-xs px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors">{loadingCompare?t.loading:t.compareBtn}</button>
           </div>
-
           {comparing&&!loadingCompare&&compareResults.length>0&&(
             <div className="flex flex-col gap-3">
               <div className="grid grid-cols-3 gap-2">
-                {cheapest&&(
-                  <div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800">
-                    <div className="text-xs text-green-400 font-medium mb-1">ถูกสุด</div>
-                    <div className="text-xs text-white font-medium">{cheapest.tier.name}</div>
-                    <div className="text-sm font-bold text-green-400 mt-1">{currency.symbol}{(Math.ceil(needPoly/cheapest.tier.poly)*(cheapest.price||0)).toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                    <div className="text-xs text-gray-500">{Math.ceil(needPoly/cheapest.tier.poly)} อัน</div>
-                  </div>
-                )}
-                {bestValue&&(
-                  <div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800">
-                    <div className="text-xs text-blue-400 font-medium mb-1">คุ้มสุด</div>
-                    <div className="text-xs text-white font-medium">{bestValue.tier.name}</div>
-                    <div className="text-sm font-bold text-blue-400 mt-1">{(bestValue.tier.poly/(bestValue.price||1)).toFixed(1)} Poly/{currency.symbol}</div>
-                    <div className="text-xs text-gray-500">{Math.ceil(needPoly/bestValue.tier.poly)} อัน</div>
-                  </div>
-                )}
-                {balanced&&(
-                  <div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800">
-                    <div className="text-xs text-purple-400 font-medium mb-1">กลางๆ</div>
-                    <div className="text-xs text-white font-medium">{balanced.tier.name}</div>
-                    <div className="text-sm font-bold text-purple-400 mt-1">{currency.symbol}{(Math.ceil(needPoly/balanced.tier.poly)*(balanced.price||0)).toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                    <div className="text-xs text-gray-500">{Math.ceil(needPoly/balanced.tier.poly)} อัน</div>
-                  </div>
-                )}
+                {cheapest&&(<div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800"><div className="text-xs text-green-400 font-medium mb-1">{t.cheap}</div><div className="text-xs text-white font-medium">{cheapest.tier.name}</div><div className="text-sm font-bold text-green-400 mt-1">{fmt(Math.ceil(needPoly/cheapest.tier.poly)*(cheapest.price||0))}</div><div className="text-xs text-gray-500">{Math.ceil(needPoly/cheapest.tier.poly)} {t.pcs}</div></div>)}
+                {bestValue&&(<div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800"><div className="text-xs text-blue-400 font-medium mb-1">{t.best}</div><div className="text-xs text-white font-medium">{bestValue.tier.name}</div><div className="text-sm font-bold text-blue-400 mt-1">{(bestValue.tier.poly/(bestValue.price||1)).toFixed(1)} Poly/{lang.symbol}</div><div className="text-xs text-gray-500">{Math.ceil(needPoly/bestValue.tier.poly)} {t.pcs}</div></div>)}
+                {balanced&&(<div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800"><div className="text-xs text-purple-400 font-medium mb-1">{t.mid}</div><div className="text-xs text-white font-medium">{balanced.tier.name}</div><div className="text-sm font-bold text-purple-400 mt-1">{fmt(Math.ceil(needPoly/balanced.tier.poly)*(balanced.price||0))}</div><div className="text-xs text-gray-500">{Math.ceil(needPoly/balanced.tier.poly)} {t.pcs}</div></div>)}
               </div>
               <div className="flex flex-col gap-1">
                 {compareResults.map(r=>{
                   const qty=Math.ceil(needPoly/r.tier.poly)
-                  const total=qty*(r.price||0)
-                  return(
-                    <div key={r.tier.name} className="flex items-center justify-between text-xs py-2 border-b border-gray-800">
-                      <span className="font-medium w-20" style={{color:r.tier.color}}>{r.tier.name}</span>
-                      <span className="text-white">{r.price?`${currency.symbol}${r.price}`:'N/A'}</span>
-                      <span className="text-gray-400">{qty} อัน</span>
-                      <span className="text-white font-medium">{r.price?`${currency.symbol}${total.toLocaleString(undefined,{maximumFractionDigits:0})}`:'N/A'}</span>
-                    </div>
-                  )
+                  return(<div key={r.tier.name} className="flex items-center justify-between text-xs py-2 border-b border-gray-800"><span className="font-medium w-20" style={{color:r.tier.color}}>{r.tier.name}</span><span className="text-white">{fmt(r.price)}</span><span className="text-gray-400">{qty} {t.pcs}</span><span className="text-white font-medium">{r.price?fmt(qty*r.price):'N/A'}</span></div>)
                 })}
               </div>
             </div>
           )}
         </div>
 
-        {/* Tier cards */}
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
-          <div className="text-sm font-medium text-white mb-3">กดที่ Tier เพื่อดูราคาปืน</div>
+          <div className="text-sm font-medium text-white mb-3">{t.tierTitle}</div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {TIERS.map(t=>{
-              const qty=Math.ceil(needPoly/t.poly)
-              return(
-                <div key={t.name} onClick={()=>openPopup(t)} className="bg-gray-800 rounded-xl p-3 cursor-pointer hover:-translate-y-0.5 transition-transform" style={{borderLeft:`3px solid ${t.color}`}}>
-                  <div className="text-xs font-medium" style={{color:t.color}}>{t.name}</div>
-                  <div className="text-xs text-gray-400 mt-1">{t.poly} Poly/อัน</div>
-                  <div className="text-sm font-bold text-white mt-2">{needPoly===0?'ครบแล้ว!':`${qty.toLocaleString()} อัน`}</div>
-                  <div className="text-xs mt-2" style={{color:t.color}}>ดูราคา →</div>
-                </div>
-              )
+            {TIERS.map(tr=>{
+              const qty=Math.ceil(needPoly/tr.poly)
+              return(<div key={tr.name} onClick={()=>openPopup(tr)} className="bg-gray-800 rounded-xl p-3 cursor-pointer hover:-translate-y-0.5 transition-transform" style={{borderLeft:`3px solid ${tr.color}`}}><div className="text-xs font-medium" style={{color:tr.color}}>{tr.name}</div><div className="text-xs text-gray-400 mt-1">{tr.poly} Poly/{t.pcs}</div><div className="text-sm font-bold text-white mt-2">{needPoly===0?'✓':`${qty.toLocaleString()} ${t.pcs}`}</div><div className="text-xs mt-2" style={{color:tr.color}}>→</div></div>)
             })}
           </div>
         </div>
 
-        {/* ตารางอัพเกรด */}
         <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
-          <div className="text-sm font-medium text-white mb-3">ตารางอัพเกรด Level {currentLevel} → {targetLevel}</div>
+          <div className="text-sm font-medium text-white mb-3">{t.table} Lv.{currentLevel} → Lv.{targetLevel}</div>
           <div className="flex flex-col gap-2">
             {UPGRADES.filter(u=>u.level>currentLevel&&u.level<=targetLevel).map(u=>{
               const cum=CUMULATIVE.find(c=>c.level===u.level)!
-              return(<div key={u.level} className="flex justify-between text-xs py-2 border-b border-gray-800"><span className="text-gray-400">Level {u.level-1} → {u.level}</span><span className="text-white">{u.bp} BP + {u.poly.toLocaleString()} Poly</span><span className="text-gray-500">รวม {(cum.poly-(cumCurrent?.poly||0)).toLocaleString()}</span></div>)
+              return(<div key={u.level} className="flex justify-between text-xs py-2 border-b border-gray-800"><span className="text-gray-400">Lv.{u.level-1} → {u.level}</span><span className="text-white">{u.bp} BP + {u.poly.toLocaleString()} Poly</span><span className="text-gray-500">{(cum.poly-(cumCurrent?.poly||0)).toLocaleString()}</span></div>)
             })}
           </div>
         </div>
       </div>
 
-      {/* Popup */}
       {popup&&(
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center px-4 z-50" onClick={()=>setPopup(null)}>
           <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-sm" style={{border:`2px solid ${popup.color}`}} onClick={e=>e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <div><h2 className="text-base font-bold" style={{color:popup.color}}>{popup.name}</h2><p className="text-xs text-gray-400 mt-1">{popup.poly} Polymers/อัน</p></div>
+              <div><h2 className="text-base font-bold" style={{color:popup.color}}>{popup.name}</h2><p className="text-xs text-gray-400 mt-1">{popup.poly} Poly/{t.pcs}</p></div>
               <button onClick={()=>setPopup(null)} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
             </div>
-            <select value={selectedGun} onChange={e=>fetchPrice(e.target.value)} className="w-full bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none mb-4">
-              <option value="">เลือกปืนเพื่อดูราคา...</option>
-              {popup.guns.map(g=>(<option key={g} value={g}>{g}</option>))}
-            </select>
-            {loadingPrice&&(<div className="text-center text-gray-400 text-sm py-4">กำลังดึงราคา...</div>)}
-            {!loadingPrice&&marketData&&(
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-800 rounded-xl p-3 text-center"><div className="text-xs text-gray-400">ราคาต่ำสุด</div><div className="text-lg font-bold text-green-400 mt-1">{marketData.lowest_price||'N/A'}</div></div>
-                  <div className="bg-gray-800 rounded-xl p-3 text-center"><div className="text-xs text-gray-400">วางขายอยู่</div><div className="text-lg font-bold text-white mt-1">{parseInt(marketData.volume||'0').toLocaleString()} ชิ้น</div></div>
-                </div>
-                {marketData.lowest_price&&(
-                  <div className="bg-gray-800 rounded-xl p-3">
-                    <div className="text-xs text-gray-400 mb-2">สรุป</div>
-                    <div className="text-sm text-white">{(popup.poly/parseFloat(marketData.lowest_price.replace(/[^0-9.]/g,''))).toFixed(1)} Poly/{currency.symbol}</div>
-                    <div className="text-xs text-gray-400 mt-1">ซื้อ {Math.ceil(needPoly/popup.poly).toLocaleString()} อัน รวม {currency.symbol}{(Math.ceil(needPoly/popup.poly)*parseFloat(marketData.lowest_price.replace(/[^0-9.]/g,''))).toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+            {loadingGuns&&(<div className="text-center text-gray-400 text-sm py-4">{t.fetching}</div>)}
+            {!loadingGuns&&gunPrices.length>0&&(
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                {gunPrices.map((g,idx)=>(
+                  <div key={g.name} className={`rounded-xl p-3 flex items-center justify-between cursor-pointer transition-colors ${selectedGun===g.name?'bg-gray-600':'bg-gray-800 hover:bg-gray-700'}`} onClick={()=>setSelectedGun(g.name)} style={idx===0?{border:`1px solid ${popup.color}`}:{}}>
+                    <div className="flex items-center gap-2">
+                      {idx===0&&<span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:popup.color+'33',color:popup.color}}>{t.cheap}</span>}
+                      <div><div className="text-xs text-white font-medium">{g.name}</div><div className="text-xs text-gray-400 mt-0.5">{g.volume.toLocaleString()} {t.inMarket}</div></div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-green-400">{fmt(g.price)}</div>
+                      {g.price&&<div className="text-xs text-gray-400">{(popup.poly/g.price).toFixed(1)} Poly/{lang.symbol}</div>}
+                    </div>
                   </div>
-                )}
-                <a href={`https://steamcommunity.com/market/listings/578080/${encodeURIComponent(selectedGun)}`} target="_blank" rel="noopener noreferrer" className="text-center text-xs text-blue-400 hover:text-blue-300">ดูใน Steam Market →</a>
+                ))}
+              </div>
+            )}
+            {selectedGun&&gunPrices.find(g=>g.name===selectedGun)?.price&&(
+              <div className="bg-gray-800 rounded-xl p-3 mt-2">
+                <div className="text-xs text-gray-400 mb-1">{t.summary}: {selectedGun}</div>
+                <div className="text-xs text-white">{t.buy} {Math.ceil(needPoly/popup.poly).toLocaleString()} {t.pcs} {t.total} {fmt(Math.ceil(needPoly/popup.poly)*(gunPrices.find(g=>g.name===selectedGun)?.price||0))}</div>
+                <a href={`https://steamcommunity.com/market/listings/578080/${encodeURIComponent(selectedGun)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 mt-1 block">{t.market}</a>
               </div>
             )}
           </div>
