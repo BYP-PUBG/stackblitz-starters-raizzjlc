@@ -3,7 +3,6 @@ import { useState } from 'react'
 
 const UPGRADES=[{level:2,bp:2,poly:1800},{level:3,bp:3,poly:2600},{level:4,bp:4,poly:3400},{level:5,bp:5,poly:4200},{level:6,bp:5,poly:5000},{level:7,bp:6,poly:5800},{level:8,bp:6,poly:6600},{level:9,bp:7,poly:7400},{level:10,bp:7,poly:8200}]
 const CUMULATIVE=[{level:2,bp:2,poly:1800},{level:3,bp:5,poly:4400},{level:4,bp:9,poly:7800},{level:5,bp:14,poly:12000},{level:6,bp:19,poly:17000},{level:7,bp:25,poly:22800},{level:8,bp:31,poly:29400},{level:9,bp:38,poly:36800},{level:10,bp:45,poly:45000}]
-
 const TIERS=[
   {name:'Special',color:'#639922',poly:16,guns:['Desert Digital - Win94','Jungle Digital - M16A4','Rugged (Orange) - M416','Rugged (Orange) - AKM','Silver Plate - S1897']},
   {name:'Rare',color:'#378ADD',poly:28,guns:['Silver Plate - UMP','Toxic - S1897','Gold Plate - Sawed-Off','Gold Plate - Vector','Desert Digital - P92']},
@@ -12,7 +11,13 @@ const TIERS=[
   {name:'Legendary',color:'#E24B4A',poly:800,guns:['Industrial Security - AKM','Gold Plate - S686','Shark Bite - Kar98k','Venetian - Mini14','Glory - AKM','PCS2 Fierce Conflict - G36C','PCS1 - M416','PCS1 - SKS','PCS2 Gilded Triumph - Kar98k','PCS2 Gilded Triumph - Mini14','PCS1 - QBZ']},
 ]
 
+const CURRENCY_OPTIONS=[
+  {label:'บาท (฿)',code:'THB',currency:6,symbol:'฿'},
+  {label:'ดอลลาร์ ($)',code:'USD',currency:1,symbol:'$'},
+]
+
 interface MarketData{lowest_price:string|null;median_price:string|null;volume:string}
+interface GunPrice{name:string;price:number|null;volume:number;tier:typeof TIERS[0]}
 
 export default function Home(){
   const [targetLevel,setTargetLevel]=useState(10)
@@ -21,6 +26,10 @@ export default function Home(){
   const [selectedGun,setSelectedGun]=useState('')
   const [marketData,setMarketData]=useState<MarketData|null>(null)
   const [loadingPrice,setLoadingPrice]=useState(false)
+  const [currency,setCurrency]=useState(CURRENCY_OPTIONS[0])
+  const [comparing,setComparing]=useState(false)
+  const [compareResults,setCompareResults]=useState<GunPrice[]>([])
+  const [loadingCompare,setLoadingCompare]=useState(false)
 
   const owned=typeof ownedPoly==='string'?0:ownedPoly
   const cumData=CUMULATIVE.find(c=>c.level===targetLevel)!
@@ -33,22 +42,68 @@ export default function Home(){
   async function fetchPrice(name:string){
     if(!name)return
     setSelectedGun(name);setMarketData(null);setLoadingPrice(true)
-    try{const res=await fetch(`/api/market?name=${encodeURIComponent(name)}`);const data=await res.json();setMarketData(data)}
-    catch{setMarketData({lowest_price:null,median_price:null,volume:'0'})}
+    try{
+      const res=await fetch(`/api/market?name=${encodeURIComponent(name)}&currency=${currency.currency}`)
+      const data=await res.json()
+      setMarketData(data)
+    }catch{setMarketData({lowest_price:null,median_price:null,volume:'0'})}
     finally{setLoadingPrice(false)}
   }
 
-  function polyPerBaht(price:string|null,poly:number):string{
-    if(!price)return '-'
+  function parsePrice(price:string|null):number|null{
+    if(!price)return null
     const p=parseFloat(price.replace(/[^0-9.]/g,''))
-    if(!p)return '-'
-    return (poly/p).toFixed(1)
+    return isNaN(p)||p===0?null:p
   }
+
+  async function compareAll(){
+    setComparing(true)
+    setLoadingCompare(true)
+    const results:GunPrice[]=[]
+    const repGuns=TIERS.map(t=>({tier:t,gun:t.guns[0]}))
+    for(const {tier,gun} of repGuns){
+      try{
+        const res=await fetch(`/api/market?name=${encodeURIComponent(gun)}&currency=${currency.currency}`)
+        const data=await res.json()
+        const price=parsePrice(data.lowest_price)
+        results.push({name:gun,price,volume:parseInt(data.volume||'0'),tier})
+      }catch{results.push({name:gun,price:null,volume:0,tier})}
+    }
+    setCompareResults(results)
+    setLoadingCompare(false)
+  }
+
+  const cheapest=compareResults.filter(r=>r.price).sort((a,b)=>{
+    const costA=Math.ceil(needPoly/a.tier.poly)*(a.price||0)
+    const costB=Math.ceil(needPoly/b.tier.poly)*(b.price||0)
+    return costA-costB
+  })[0]
+
+  const bestValue=compareResults.filter(r=>r.price).sort((a,b)=>{
+    const ppA=a.tier.poly/(a.price||999)
+    const ppB=b.tier.poly/(b.price||999)
+    return ppB-ppA
+  })[0]
+
+  const balanced=compareResults.filter(r=>r.price).sort((a,b)=>{
+    const qtyA=Math.ceil(needPoly/a.tier.poly)
+    const qtyB=Math.ceil(needPoly/b.tier.poly)
+    return qtyA-qtyB
+  }).slice(1)[0]
 
   return(
     <main className="min-h-screen bg-gray-950 text-white px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-1">PUBG <span className="text-red-500">POLYMER</span></h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">POLYMER</span></h1>
+          <div className="flex gap-2">
+            {CURRENCY_OPTIONS.map(c=>(
+              <button key={c.code} onClick={()=>{setCurrency(c);setCompareResults([]);setComparing(false)}} className={`text-xs px-3 py-1 rounded-full border transition-colors ${currency.code===c.code?'bg-red-500 border-red-500 text-white':'border-gray-700 text-gray-400 hover:text-white'}`}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <p className="text-gray-400 text-sm mb-8">คำนวณ Polymers ที่ต้องการอัพเกรดปืน</p>
 
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
@@ -72,18 +127,89 @@ export default function Home(){
           <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">Blueprints รวม</div><div className="text-xl font-bold mt-1">{totalBp}</div></div>
         </div>
 
+        {/* ปุ่มเปรียบเทียบ */}
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
-          <div className="text-sm font-medium text-white mb-1">กดที่ Tier เพื่อดูราคาปืนและเปรียบเทียบ</div>
-          <div className="text-xs text-gray-500 mb-3">ระบบดึงราคาจาก Steam Market แบบ real-time</div>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-sm font-medium text-white">เปรียบเทียบทุก Tier</div>
+              <div className="text-xs text-gray-500">ดึงราคาจาก Steam Market แล้วแนะนำให้เลย</div>
+            </div>
+            <button onClick={compareAll} className="text-xs px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors">
+              {loadingCompare?'กำลังดึง...':'เปรียบเทียบ'}
+            </button>
+          </div>
+
+          {comparing&&!loadingCompare&&compareResults.length>0&&(
+            <div className="flex flex-col gap-3">
+              {/* 3 คำแนะนำ */}
+              <div className="grid grid-cols-3 gap-2">
+                {cheapest&&(
+                  <div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800">
+                    <div className="text-xs text-green-400 font-medium mb-1">ถูกสุด</div>
+                    <div className="text-xs text-white font-medium">{cheapest.tier.name}</div>
+                    <div className="text-xs text-gray-400">{cheapest.name.split(' - ')[0]}</div>
+                    <div className="text-sm font-bold text-green-400 mt-1">
+                      {currency.symbol}{(Math.ceil(needPoly/cheapest.tier.poly)*(cheapest.price||0)).toLocaleString(undefined,{maximumFractionDigits:0})}
+                    </div>
+                    <div className="text-xs text-gray-500">{Math.ceil(needPoly/cheapest.tier.poly)} อัน</div>
+                  </div>
+                )}
+                {bestValue&&(
+                  <div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800">
+                    <div className="text-xs text-blue-400 font-medium mb-1">คุ้มสุด</div>
+                    <div className="text-xs text-white font-medium">{bestValue.tier.name}</div>
+                    <div className="text-xs text-gray-400">{bestValue.name.split(' - ')[0]}</div>
+                    <div className="text-sm font-bold text-blue-400 mt-1">
+                      {(bestValue.tier.poly/(bestValue.price||1)).toFixed(1)} Poly/{currency.symbol}
+                    </div>
+                    <div className="text-xs text-gray-500">{Math.ceil(needPoly/bestValue.tier.poly)} อัน</div>
+                  </div>
+                )}
+                {balanced&&(
+                  <div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800">
+                    <div className="text-xs text-purple-400 font-medium mb-1">กลางๆ</div>
+                    <div className="text-xs text-white font-medium">{balanced.tier.name}</div>
+                    <div className="text-xs text-gray-400">{balanced.name.split(' - ')[0]}</div>
+                    <div className="text-sm font-bold text-purple-400 mt-1">
+                      {currency.symbol}{(Math.ceil(needPoly/balanced.tier.poly)*(balanced.price||0)).toLocaleString(undefined,{maximumFractionDigits:0})}
+                    </div>
+                    <div className="text-xs text-gray-500">{Math.ceil(needPoly/balanced.tier.poly)} อัน</div>
+                  </div>
+                )}
+              </div>
+
+              {/* ตารางทุก Tier */}
+              <div className="flex flex-col gap-1 mt-1">
+                {compareResults.map(r=>{
+                  const qty=Math.ceil(needPoly/r.tier.poly)
+                  const total=(qty*(r.price||0))
+                  const ppb=(r.tier.poly/(r.price||1)).toFixed(1)
+                  return(
+                    <div key={r.tier.name} className="flex items-center justify-between text-xs py-2 border-b border-gray-800">
+                      <span className="font-medium w-20" style={{color:r.tier.color}}>{r.tier.name}</span>
+                      <span className="text-gray-400 w-24">{r.name.split(' - ')[0]}</span>
+                      <span className="text-white">{r.price?`${currency.symbol}${r.price}`:'N/A'}</span>
+                      <span className="text-gray-400">{qty} อัน</span>
+                      <span className="text-white font-medium">{r.price?`${currency.symbol}${total.toLocaleString(undefined,{maximumFractionDigits:0})}`:'N/A'}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tier cards */}
+        <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
+          <div className="text-sm font-medium text-white mb-3">กดที่ Tier เพื่อดูราคาปืน</div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {TIERS.map(t=>{
-              const gunsNeeded=Math.ceil(needPoly/t.poly)
-              const isZero=needPoly===0
+              const qty=Math.ceil(needPoly/t.poly)
               return(
                 <div key={t.name} onClick={()=>openPopup(t)} className="bg-gray-800 rounded-xl p-3 cursor-pointer hover:-translate-y-0.5 transition-transform" style={{borderLeft:`3px solid ${t.color}`}}>
                   <div className="text-xs font-medium" style={{color:t.color}}>{t.name}</div>
                   <div className="text-xs text-gray-400 mt-1">{t.poly} Poly/อัน</div>
-                  <div className="text-sm font-bold text-white mt-2">{isZero?'ครบแล้ว!':`${gunsNeeded.toLocaleString()} อัน`}</div>
+                  <div className="text-sm font-bold text-white mt-2">{needPoly===0?'ครบแล้ว!':`${qty.toLocaleString()} อัน`}</div>
                   <div className="text-xs mt-2" style={{color:t.color}}>ดูราคา →</div>
                 </div>
               )
@@ -109,14 +235,11 @@ export default function Home(){
               <div><h2 className="text-base font-bold" style={{color:popup.color}}>{popup.name}</h2><p className="text-xs text-gray-400 mt-1">{popup.poly} Polymers/อัน</p></div>
               <button onClick={()=>setPopup(null)} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
             </div>
-
             <select value={selectedGun} onChange={e=>fetchPrice(e.target.value)} className="w-full bg-gray-800 text-white rounded-xl px-3 py-2 text-sm border border-gray-700 outline-none mb-4">
               <option value="">เลือกปืนเพื่อดูราคา...</option>
               {popup.guns.map(g=>(<option key={g} value={g}>{g}</option>))}
             </select>
-
             {loadingPrice&&(<div className="text-center text-gray-400 text-sm py-4">กำลังดึงราคา...</div>)}
-
             {!loadingPrice&&marketData&&(
               <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-2">
@@ -125,9 +248,9 @@ export default function Home(){
                 </div>
                 {marketData.lowest_price&&(
                   <div className="bg-gray-800 rounded-xl p-3">
-                    <div className="text-xs text-gray-400 mb-2">ความคุ้มค่า</div>
-                    <div className="text-sm text-white">{polyPerBaht(marketData.lowest_price,popup.poly)} Poly ต่อบาท</div>
-                    <div className="text-xs text-gray-400 mt-1">ต้องซื้อ {Math.ceil(needPoly/popup.poly).toLocaleString()} อัน รวม {(Math.ceil(needPoly/popup.poly)*parseFloat(marketData.lowest_price.replace(/[^0-9.]/g,''))).toLocaleString(undefined,{maximumFractionDigits:0})} บาท</div>
+                    <div className="text-xs text-gray-400 mb-2">สรุป</div>
+                    <div className="text-sm text-white">{(popup.poly/parseFloat(marketData.lowest_price.replace(/[^0-9.]/g,''))).toFixed(1)} Poly/{currency.symbol}</div>
+                    <div className="text-xs text-gray-400 mt-1">ซื้อ {Math.ceil(needPoly/popup.poly).toLocaleString()} อัน รวม {currency.symbol}{(Math.ceil(needPoly/popup.poly)*parseFloat(marketData.lowest_price.replace(/[^0-9.]/g,''))).toLocaleString(undefined,{maximumFractionDigits:0})}</div>
                   </div>
                 )}
                 <a href={`https://steamcommunity.com/market/listings/578080/${encodeURIComponent(selectedGun)}`} target="_blank" rel="noopener noreferrer" className="text-center text-xs text-blue-400 hover:text-blue-300">ดูใน Steam Market →</a>
