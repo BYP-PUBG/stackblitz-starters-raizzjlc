@@ -90,7 +90,7 @@ export default function Home(){
     <main className="min-h-screen bg-gray-950 text-white px-4 py-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">{t.title||'POLYMER'}</span></h1>
+          <h1 className="text-2xl font-bold">PUBG <span className="text-red-500">POLYMER</span></h1>
           <div className="flex gap-2">
             {LANGS.map(l=>(
               <button key={l.code} onClick={()=>{setLang(l);setCompareResults([]);setComparing(false)}} className={`text-xs px-3 py-1 rounded-full border transition-colors ${lang.code===l.code?'bg-red-500 border-red-500 text-white':'border-gray-700 text-gray-400 hover:text-white'}`}>
