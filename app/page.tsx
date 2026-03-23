@@ -81,9 +81,28 @@ export default function Home(){
     setLoadingCompare(false)
   }
 
-  const cheapest=compareResults.filter(r=>r.price).sort((a,b)=>(Math.ceil(needPoly/a.tier.poly)*(a.price||0))-(Math.ceil(needPoly/b.tier.poly)*(b.price||0)))[0]
-  const bestValue=compareResults.filter(r=>r.price).sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))[0]
-  const balanced=compareResults.filter(r=>r.price).sort((a,b)=>Math.ceil(needPoly/a.tier.poly)-Math.ceil(needPoly/b.tier.poly)).slice(1)[0]
+  const validResults=compareResults.filter(r=>r.price&&r.price>0)
+
+const bestValue=validResults.sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))[0]
+
+function calcMix(cheapRatio:number,expRatio:number){
+  if(validResults.length<2)return null
+  const sorted=[...validResults].sort((a,b)=>(b.tier.poly/(b.price||999))-(a.tier.poly/(a.price||999)))
+  const cheapTier=sorted[0]
+  const expTier=sorted[Math.min(1,sorted.length-1)]
+  const totalPoly=needPoly
+  const cheapPoly=Math.round(totalPoly*cheapRatio)
+  const expPoly=totalPoly-cheapPoly
+  const cheapQty=Math.ceil(cheapPoly/cheapTier.tier.poly)
+  const expQty=Math.ceil(expPoly/expTier.tier.poly)
+  const totalCost=cheapQty*(cheapTier.price||0)+expQty*(expTier.price||0)
+  const totalQty=cheapQty+expQty
+  const avgPolyPerBaht=totalPoly/totalCost
+  return{cheapTier,expTier,cheapQty,expQty,totalCost,totalQty,avgPolyPerBaht}
+}
+
+const mix7030=calcMix(0.7,0.3)
+const mix4060=calcMix(0.4,0.6)
   const levelOptions=Array.from({length:10},(_,i)=>i+1)
 
   return(
@@ -122,12 +141,47 @@ export default function Home(){
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.needed}</div><div className="text-xl font-bold mt-1">{totalPolyNeeded.toLocaleString()}</div></div>
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.lacking}</div><div className="text-xl font-bold mt-1 text-red-400">{needPoly.toLocaleString()}</div></div>
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800 text-center"><div className="text-xs text-gray-400">{t.bp}</div><div className="text-xl font-bold mt-1">{totalBpNeeded}</div></div>
-        </div>
-
+       <div className="flex flex-col gap-3">
+  {bestValue&&(
+    <div className="bg-green-900 bg-opacity-30 rounded-xl p-3 border border-green-800">
+      <div className="text-xs text-green-400 font-medium mb-1">Strategy 1 — คุ้มสุด</div>
+      <div className="text-xs text-gray-300 mb-2">ซื้อ <span className="font-medium" style={{color:bestValue.tier.color}}>{bestValue.tier.name}</span> ทั้งหมด</div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div><div className="text-xs text-gray-400">ราคารวม</div><div className="text-sm font-bold text-green-400">{fmt(Math.ceil(needPoly/bestValue.tier.poly)*(bestValue.price||0))}</div></div>
+        <div><div className="text-xs text-gray-400">จำนวน</div><div className="text-sm font-bold text-white">{Math.ceil(needPoly/bestValue.tier.poly)} ชิ้น</div></div>
+        <div><div className="text-xs text-gray-400">Poly/บาท</div><div className="text-sm font-bold text-white">{(bestValue.tier.poly/(bestValue.price||1)).toFixed(1)}</div></div>
+      </div>
+    </div>
+  )}
+  {mix7030&&(
+    <div className="bg-blue-900 bg-opacity-30 rounded-xl p-3 border border-blue-800">
+      <div className="text-xs text-blue-400 font-medium mb-1">Strategy 2 — ผสม 70/30</div>
+      <div className="text-xs text-gray-300 mb-2">
+        <span className="font-medium" style={{color:mix7030.cheapTier.tier.color}}>{mix7030.cheapTier.tier.name}</span> {mix7030.cheapQty} ชิ้น +{' '}
+        <span className="font-medium" style={{color:mix7030.expTier.tier.color}}>{mix7030.expTier.tier.name}</span> {mix7030.expQty} ชิ้น
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div><div className="text-xs text-gray-400">ราคารวม</div><div className="text-sm font-bold text-blue-400">{fmt(mix7030.totalCost)}</div></div>
+        <div><div className="text-xs text-gray-400">จำนวน</div><div className="text-sm font-bold text-white">{mix7030.totalQty} ชิ้น</div></div>
+        <div><div className="text-xs text-gray-400">Poly/บาท</div><div className="text-sm font-bold text-white">{mix7030.avgPolyPerBaht.toFixed(1)}</div></div>
+      </div>
+    </div>
+  )}
+  {mix4060&&(
+    <div className="bg-purple-900 bg-opacity-30 rounded-xl p-3 border border-purple-800">
+      <div className="text-xs text-purple-400 font-medium mb-1">Strategy 3 — ผสม 40/60</div>
+      <div className="text-xs text-gray-300 mb-2">
+        <span className="font-medium" style={{color:mix4060.cheapTier.tier.color}}>{mix4060.cheapTier.tier.name}</span> {mix4060.cheapQty} ชิ้น +{' '}
+        <span className="font-medium" style={{color:mix4060.expTier.tier.color}}>{mix4060.expTier.tier.name}</span> {mix4060.expQty} ชิ้น
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div><div className="text-xs text-gray-400">ราคารวม</div><div className="text-sm font-bold text-purple-400">{fmt(mix4060.totalCost)}</div></div>
+        <div><div className="text-xs text-gray-400">จำนวน</div><div className="text-sm font-bold text-white">{mix4060.totalQty} ชิ้น</div></div>
+        <div><div className="text-xs text-gray-400">Poly/บาท</div><div className="text-sm font-bold text-white">{mix4060.avgPolyPerBaht.toFixed(1)}</div></div>
+      </div>
+    </div>
+  )}
+</div>
         <div className="bg-gray-900 rounded-2xl p-5 mb-4 border border-gray-800">
           <div className="flex items-center justify-between mb-3">
             <div><div className="text-sm font-medium text-white">{t.compare}</div><div className="text-xs text-gray-500">{t.compareSub}</div></div>
