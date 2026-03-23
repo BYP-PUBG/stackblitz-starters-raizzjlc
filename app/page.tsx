@@ -228,4 +228,46 @@ export default function Home(){
           <div className="flex flex-col gap-2">
             {UPGRADES.filter(u=>u.level>currentLevel&&u.level<=targetLevel).map(u=>{
               const cum=CUMULATIVE.find(c=>c.level===u.level)!
-              return(<div key={u.level} className="flex justify-between text-xs py-2 border-b border-gray-800"><span className="text-gray-400">Lv.{u.level-1} → {u.level}</span><span className="text-white">{u.bp} BP + {u.pol
+              return(<div key={u.level} className="flex justify-between text-xs py-2 border-b border-gray-800"><span className="text-gray-400">Lv.{u.level-1} → {u.level}</span><span className="text-white">{u.bp} BP + {u.poly.toLocaleString()} Poly</span><span className="text-gray-500">{(cum.poly-(cumCurrent?.poly||0)).toLocaleString()}</span></div>)
+            })}
+          </div>
+        </div>
+      </div>
+
+      {popup&&(
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center px-4 z-50" onClick={()=>setPopup(null)}>
+          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-sm" style={{border:`2px solid ${popup.color}`}} onClick={e=>e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <div><h2 className="text-base font-bold" style={{color:popup.color}}>{popup.name}</h2><p className="text-xs text-gray-400 mt-1">{popup.poly} Poly/{t.pcs}</p></div>
+              <button onClick={()=>setPopup(null)} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
+            </div>
+            {loadingGuns&&(<div className="text-center text-gray-400 text-sm py-4">{t.fetching}</div>)}
+            {!loadingGuns&&gunPrices.length>0&&(
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                {gunPrices.map((g,idx)=>(
+                  <div key={g.name} className={`rounded-xl p-3 flex items-center justify-between cursor-pointer transition-colors ${selectedGun===g.name?'bg-gray-600':'bg-gray-800 hover:bg-gray-700'}`} onClick={()=>setSelectedGun(g.name)} style={idx===0?{border:`1px solid ${popup.color}`}:{}}>
+                    <div className="flex items-center gap-2">
+                      {idx===0&&<span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:popup.color+'33',color:popup.color}}>ถูกสุด</span>}
+                      <div><div className="text-xs text-white font-medium">{g.name}</div><div className="text-xs text-gray-400 mt-0.5">{g.volume.toLocaleString()} {t.inMarket}</div></div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-green-400">{fmt(g.price)}</div>
+                      {g.price&&<div className="text-xs text-gray-400">{(popup.poly/g.price).toFixed(1)} Poly/{lang.symbol}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedGun&&gunPrices.find(g=>g.name===selectedGun)?.price&&(
+              <div className="bg-gray-800 rounded-xl p-3 mt-2">
+                <div className="text-xs text-gray-400 mb-1">{t.summary}: {selectedGun}</div>
+                <div className="text-xs text-white">{t.buy} {Math.ceil(needPoly/popup.poly).toLocaleString()} {t.pcs} {t.total} {fmt(Math.ceil(needPoly/popup.poly)*(gunPrices.find(g=>g.name===selectedGun)?.price||0))}</div>
+                <a href={`https://steamcommunity.com/market/listings/578080/${encodeURIComponent(selectedGun)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 mt-1 block">{t.market}</a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
+  )
+}
