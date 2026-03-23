@@ -285,7 +285,59 @@ export default function Home(){
           })}
         </div>
       </div>
+</div>
+</div>
 
+<div style={{
+  ...cardSm,
+  marginTop:'20px',
+  textAlign:'center',
+  border:'1px solid #2a2a3e',
+  background:'linear-gradient(145deg, #0f0f1a, #151527)',
+  boxShadow:'0 0 20px rgba(226,75,74,0.15)'
+}}>
+  <div style={{
+    fontSize:'13px',
+    color:'#E24B4A',
+    marginBottom:'12px',
+    fontWeight:'700'
+  }}>
+    📢 ติดต่อโฆษณา / Contact
+  </div>
+
+  <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+
+    <a 
+      href="https://www.instagram.com/dunk_ed?igsh=bGJ6ajl4bXAzbTRr&utm_source=qr"
+      target="_blank"
+      style={{
+        padding:'10px',
+        borderRadius:'10px',
+        background:'linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045)',
+        color:'white',
+        textDecoration:'none'
+      }}
+    >
+      📸 Instagram: @dunk_ed
+    </a>
+
+    <a 
+      href="mailto:ppkk5811@gmail.com"
+      style={{
+        padding:'10px',
+        borderRadius:'10px',
+        background:'#1a1a2e',
+        color:'#378ADD',
+        textDecoration:'none',
+        border:'1px solid #2a2a3e'
+      }}
+    >
+      ✉️ Email: ppkk5811@gmail.com
+    </a>
+
+  </div>
+</div>
+{popup&&(
       {popup&&(
         <div onClick={()=>setPopup(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',zIndex:200}}>
           <div onClick={e=>e.stopPropagation()} style={{background:'#0f0f1a',border:`1px solid ${popup.color}`,borderRadius:'20px',padding:'24px',width:'100%',maxWidth:'400px',maxHeight:'80vh',overflowY:'auto'}}>
