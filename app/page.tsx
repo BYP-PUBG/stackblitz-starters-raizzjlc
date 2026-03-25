@@ -91,14 +91,15 @@ export default function Home(){
     if(!best)return null
     const qty=Math.ceil(needPoly/best.tier.poly)
     const cost=qty*(best.price||0)
-    return{r:best,qty,cost,ppb:needPoly/cost}
+    return{r:best,qty,cost,ppb:(best.price||0)*lang.rate}
   }
   function mix(r:number){
     if(!best||!second)return null
     const q1=Math.ceil(needPoly*r/best.tier.poly)
     const q2=Math.ceil(needPoly*(1-r)/second.tier.poly)
     const cost=q1*(best.price||0)+q2*(second.price||0)
-    return{r1:best,r2:second,q1,q2,qty:q1+q2,cost,ppb:needPoly/cost}
+    const avgPpb=((q1*(best.price||0))+(q2*(second.price||0)))/(q1*best.tier.poly+q2*second.tier.poly)*lang.rate
+return{r1:best,r2:second,q1,q2,qty:q1+q2,cost,ppb:avgPpb}
   }
   const rs1=s1(),rs2=mix(0.7),rs3=mix(0.4)
   const levels=Array.from({length:10},(_,i)=>i+1)
