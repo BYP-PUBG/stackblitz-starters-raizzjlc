@@ -28,11 +28,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </nav>
 
         {/* Ad Banner Top */}
-        <div style={{background:'#0f0f1a',borderBottom:'1px solid #1e1e2e',padding:'8px 24px',textAlign:'center'}}>
-          <div style={{maxWidth:'728px',height:'90px',margin:'0 auto',background:'#1a1a2e',border:'1px dashed #2a2a3e',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <span style={{color:'#444',fontSize:'12px'}}>Advertisement 728×90</span>
-          </div>
-        </div>
+<div style={{background:'#0f0f1a',borderBottom:'1px solid #1e1e2e',padding:'8px 24px',textAlign:'center'}}>
+  <div style={{maxWidth:'728px',margin:'0 auto'}}>
+    <a href="https://www.facebook.com/MyBoo147" target="_blank" rel="noopener noreferrer">
+      <img src="/myboo-banner.jpg" alt="MyBoo PUBG PC Buy and Sell" style={{width:'100%',height:'auto',borderRadius:'8px',display:'block'}}/>
+    </a>
+  </div>
+</div>
 
         {/* Content */}
         <main>{children}</main>
