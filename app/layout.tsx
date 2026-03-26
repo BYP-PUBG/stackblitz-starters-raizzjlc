@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div>
                 <div style={{fontSize:'12px',color:'#888',marginBottom:'8px',fontWeight:'500'}}>ติดต่อโฆษณา</div>
                 <div style={{fontSize:'13px',color:'#666'}}>สนใจลงโฆษณา</div>
-                <div style={{fontSize:'13px',color:'#E24B4A',marginTop:'4px'}}>contact@pubgpolymer.com</div>
+                <div style={{fontSize:'13px',color:'#E24B4A',marginTop:'4px'}}>IG:dunk_ed</div>
               </div>
             </div>
             <div style={{borderTop:'1px solid #1e1e2e',paddingTop:'16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}}>
